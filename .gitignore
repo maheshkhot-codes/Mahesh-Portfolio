@@ -1,0 +1,13 @@
+# Maven
+target/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment / secrets
+application.properties
+
+# Build files
+*.class
+*.jar
