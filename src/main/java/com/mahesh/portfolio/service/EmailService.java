@@ -1,34 +1,52 @@
 package com.mahesh.portfolio.service;
 
 import com.mahesh.portfolio.model.ContactMessage;
-
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public void sendContactMessage(ContactMessage contact) {
 
-        SimpleMailMessage mail = new SimpleMailMessage();
+        String url = "https://api.resend.com/emails";
 
-        mail.setTo("khotmahesh58@gmail.com");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(resendApiKey);
 
-        mail.setSubject("New Portfolio Contact Message");
+        Map<String, Object> body = new HashMap<>();
 
-        mail.setText(
-            "Name: " + contact.getName() +
-            "\nEmail: " + contact.getEmail() +
-            "\n\nMessage:\n" + contact.getMessage()
+        body.put("from", "Portfolio <onboarding@resend.dev>");
+        body.put("to", new String[]{"khotmahesh58@gmail.com"});
+        body.put("subject", "New Portfolio Contact Message");
+
+        body.put("text",
+                "Name: " + contact.getName() +
+                "\nEmail: " + contact.getEmail() +
+                "\n\nMessage:\n" + contact.getMessage()
         );
 
-        mailSender.send(mail);
+        HttpEntity<Map<String, Object>> request =
+                new HttpEntity<>(body, headers);
+
+        ResponseEntity<String> response =
+                restTemplate.postForEntity(url, request, String.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException(
+                    "Failed to send email: " + response.getBody()
+            );
+        }
     }
 }
